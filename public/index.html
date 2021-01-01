@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <title>Sync Script</title>
+    <meta name="theme-color" content="#000"/>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <style>
+        html, body {
+            margin: 0;
+            font-family: sans-serif;
+            color: #444;
+        }
+
+        table {
+            width: 100%;
+            border-spacing : 0;
+            border-collapse : collapse;
+        }
+
+        td {
+            border-top: 1px solid;
+        }
+
+        .sync {
+            background: #eee;
+        }
+
+        td:nth-child(1) {
+            width: 180px;
+        }
+
+        .col-1-hide td:nth-child(1) {
+            display: none;
+        }
+
+        .col-2-hide td:nth-child(2) {
+            display: none;
+        }
+
+        .col-3-hide td:nth-child(3) {
+            display: none;
+        }
+
+        .col-4-hide td:nth-child(4) {
+            display: none;
+        }
+
+        .menu {
+            position: fixed;
+            bottom: 0;
+            background: white;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            z-index: 30;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div id="wrapper">
+</div>
+
+<div class="menu">
+    <button class="edit">Edit: ON</button>
+    <button class="scroll">Scroll : ON</button>
+    |
+    <button class="col1">1</button>
+    <button class="col2">2</button>
+    <button class="col3">3</button>
+    <button class="col4">4</button>
+</div>
+
+
+<script>
+    // Bind
+    let body = document.body;
+    let wrapper = document.querySelector("#wrapper");
+    let edit = document.querySelector(".edit");
+    let scroll = document.querySelector(".scroll");
+    let col1 = document.querySelector(".col1");
+    let col2 = document.querySelector(".col2");
+    let col3 = document.querySelector(".col3");
+    let col4 = document.querySelector(".col4");
+
+    // Data
+    let script = "";
+    let sync = -1;
+    let hide1 = false;
+    let hide2 = false;
+    let hide3 = false;
+    let hide4 = false;
+
+    let editing = false;
+    let scrolling = true;
+
+    // Computed
+
+    let socket = io();
+
+    function render() {
+        wrapper.innerHTML = script;
+
+        edit.onclick = () => {
+            editing = !editing;
+            render();
+        }
+
+        scroll.onclick = () => {
+            scrolling = !scrolling;
+            render();
+        }
+
+        edit.textContent = "Edit: " + (editing ? "ON" : "OFF");
+        scroll.textContent = "Scroll: " + (scrolling ? "ON" : "OFF");
+
+        body.setAttribute("class", "");
+
+        if(hide1) {
+            body.classList.add("col-1-hide");
+        }
+        if(hide2) {
+            body.classList.add("col-2-hide");
+        }
+        if(hide3) {
+            body.classList.add("col-3-hide");
+        }
+        if(hide4) {
+            body.classList.add("col-4-hide");
+        }
+
+        col4.style.display = "none";
+
+        col1.textContent = hide1 ? "!1" : "1";
+        col2.textContent = hide2 ? "!2" : "2";
+        col3.textContent = hide3 ? "!3" : "3";
+        col4.textContent = hide4 ? "!4" : "4";
+
+        col1.onclick = () => {
+            hide1 = !hide1;
+            render();
+        }
+        col2.onclick = () => {
+            hide2 = !hide2;
+            render();
+        }
+        col3.onclick = () => {
+            hide3 = !hide3;
+            render();
+        }
+        col4.onclick = () => {
+            hide4 = !hide4;
+            render();
+        }
+
+        wrapper.querySelectorAll("tr").forEach((tr, index) => {
+            tr.onclick = () => {
+                if(editing) {
+                    socket.emit("sync", index + 1);
+                }
+            }
+        })
+
+        let syncEl = wrapper.querySelector("tr:nth-child(" + sync + ")");
+        if (syncEl) {
+            syncEl.classList.add("sync");
+        }
+
+    }
+
+
+    const events = [
+        "updateScript",
+        "sync",
+    ];
+
+    socket.on("updateScript", payload => {
+        script = payload;
+        render();
+    });
+
+    socket.on("sync", payload => {
+        sync = payload;
+        render();
+
+        let syncEl = document.querySelector(".sync");
+        if(syncEl && scrolling) {
+            syncEl.scrollIntoView({behavior: "smooth"});
+        }
+    });
+
+    render();
+</script>
+</body>
+</html>
